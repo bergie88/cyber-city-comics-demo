@@ -1,0 +1,40 @@
+    <%- include('_header')-%>
+    <%- include('_nav')-%>
+    <%- include('_mainHeading') -%>
+    <main>
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mx-auto">
+          <!-- Replace with your content -->
+          <div class="px-4 py-6 sm:px-0">
+            <h2 class="text-center text-3xl py-6 sm:py-2"><%= dataObj.title %></h2>
+            <h2 class="text-center text-xl py-6 sm:py-2" id="date"></h2>
+            <div class="py-4" style="text-align: center;">
+              <button class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-l">
+                <a href="<%= previousURL %>">Prev</a>
+              </button>
+              <button class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-r">
+               <a href="<%= nextURL %>">Next</a>
+              </button>
+            </div>
+            <img class="object-contain mx-auto" src="<%= dataObj.img %>" alt="title"/>
+            <div class="py-4" style="text-align: center;">
+              <button class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-l">
+                <a href="<%= previousURL %>">Prev</a>
+              </button>
+              <button class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-r">
+               <a href="<%= nextURL %>">Next</a>
+              </button>
+            </div>
+            <div class="container mx-auto" style="width:60%">
+              <h2 class="text-center text-l py-6 sm:py-2 font-bold">Transcript</h2>
+              <h2 class="text-left text-l py-6 sm:py-2" id="transcript"></h2>
+            </div>
+          </div>
+          <!-- /End replace -->
+        </div>
+    </main>
+    <script>
+      document.getElementById("date").innerHTML = "<%= date %>";
+      var ts = `<%= transcript %>`.replaceAll("\n", "<br/>");
+      document.getElementById("transcript").innerHTML = ts;
+    </script>
+    <%- include ('_footer') -%>
