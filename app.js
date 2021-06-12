@@ -3,7 +3,7 @@ const request = require("request");
 const lodash = require("lodash")
 var path = require("path");
 const { render } = require("ejs");
-
+let idCounts = new Map();
 //app
 const app = express();
 app.set("port", process.env.PORT || 3000);
@@ -45,89 +45,74 @@ function getMonthString (month){
       };
 }
 
-//routes
-app.get('/', (req,resp) => {
-    request('https://xkcd.com/info.0.json', {json: true }, (err, res, body) => {
+function countPageView(params, idcounts){
+    if(idCounts.has(params))
+    {
+        idcounts.get(params).val++;
+    }
+    else
+    {
+        idcounts.set(params,{val:1});
+    }
+    return idcounts.get(params).val
+}
+
+
+function setPrevURL(params){
+    if(params - 1 < 1)
+    {
+        return "/comics/" + (params);
+    }
+    else
+    {
+        return "/comics/" + (params-1);
+    }
+}
+
+function loadPageData(resp, params, maxNum){
+    if(params == 0)
+        var link = 'https://xkcd.com/info.0.json';
+    else
+        var link = 'https://xkcd.com/'+ params +'/info.0.json'
+    request(link, {json: true }, (err, res, body) => {
         if(res.statusCode === 200){
             if(err){
-                resp.render("404");
+                return resp.render("404");
             }
-            var params = body.num;
+            var pageNum = body.num;
+            var nextURL;
+            if(params == 0 || pageNum ==maxNum)
+                nextURL = "/";
+            else
+                nextURL = "/comics/" + (params+1)
+            console.log(params , " " ,maxNum, " ",  pageNum);
             var frames = body.transcript.replace("[[", "FRAME:  ").replaceAll("[[", "\nFRAME:  ").replaceAll("]]", "").replace("{{alt text: ", "\nAlternate Title: ").replace("{{Alt text: ","\nAlternate Title: ").replace("{{ alt: ","\nAlternate Title: ").replace("}}", "").replaceAll("{{","").replaceAll("}}", "");
             var month = getMonthString(body.month);
-
             var date = month + " " + body.day + ", " + body.year;
-            var nextURL = "/comics/" + (params+1);
-            if(params+1 < params)
-            {
-                var nextURL = "/comics/" + (params+1);
-            }
-            else{
-                var nextURL = "/";
-            }
-            
-            if(params - 1 < 1)
-            {
-                var previousURL = "/comics/" + (params);
-            }
-            else
-            {
-                var previousURL = "/comics/" + (params-1);
-            }
-            resp.render("index", {dataObj: body, transcript:frames, date:date, nextURL:nextURL, previousURL:previousURL});
-
-            resp.render("index", {dataObj: body});
+            return resp.render("index", {dataObj: body, transcript:frames, date:date, nextURL:nextURL, previousURL:setPrevURL(pageNum), pageCount:countPageView(pageNum, idCounts)});
         }
         else
-            resp.render("404");
+            return resp.render("404");
     })
+}
 
+
+//routes
+app.get('/', (req,resp) => {
+    loadPageData(resp, 0, 0);
 })
 
 app.get('/comics/:id', (req,resp) => {
-    try{
-    var params = parseInt(req.params.id);
-    }
-    catch{
-        resp.render("404");
-    }
-    request('https://xkcd.com/info.0.json', {json: true }, (err, res1, body1) => {
+    try{var params = parseInt(req.params.id);}
+    catch{resp.render("404");}
+
+    request('https://xkcd.com/info.0.json', {json: true }, async (err, res1, body1) => {
         if(res1.statusCode === 200){
             if(err){
                 resp.render("404");
             }
-            var maxNum = body1.num;
-            request('https://xkcd.com/'+ params +'/info.0.json', {json: true }, (err, res, body) => {
-                if(res.statusCode === 200){
-                    if(err){
-                        console.log(err);
-                    }
-                    var frames = body.transcript.replace("[[", "FRAME:  ").replaceAll("[[", "\nFRAME:  ").replaceAll("]]", "").replace("{{alt text: ", "\nAlternate Title: ").replace("{{Alt text: ","\nAlternate Title: ").replace("{{ alt: ","\nAlternate Title: ").replace("}}", "").replaceAll("{{","").replaceAll("}}", "");
-                    var month = getMonthString(body.month);
-
-                    var date = month + " " + body.day + ", " + body.year;
-                    var nextURL = "/comics/" + (params+1);
-                    if(params+1 < params)
-                    {
-                        var nextURL = "/comics/" + (params+1);
-                    }
-                    else{
-                        var nextURL = "/";
-                    }
-
-                    if(params - 1 < 1)
-                    {
-                        var previousURL = "/comics/" + (params);
-                    }
-                    else
-                    {
-                        var previousURL = "/comics/" + (params-1);
-                    }
-                    resp.render("index", {dataObj: body, transcript:frames, date:date, nextURL:nextURL, previousURL:previousURL});
-                }
-                else
-                    resp.render("404");
-            })
+            var maxNum = await body1.num;
+            loadPageData(resp, params, maxNum);
         }
         else
             resp.render("404");
@@ -135,35 +120,14 @@ app.get('/comics/:id', (req,resp) => {
 })
 
 app.get('/randomComic', (req,resp) => {
-    request('https://xkcd.com/info.0.json', {json: true }, (err, res, body) => {
+    request('https://xkcd.com/info.0.json', {json: true }, async( err, res, body) => {
         if(res.statusCode === 200){
             if(err){
                 resp.render("404");
             }
-            var maxNum = body.num;
+            var maxNum = await body.num;
             var params = lodash.random(1,maxNum);
-            request('https://xkcd.com/'+ params +'/info.0.json', {json: true }, (err2, res2, body2) => {
-            if(res2.statusCode === 200){
-                if(err2){
-                    console.log(err);
-                }
-                var frames = body2.transcript.replace("[[", "FRAME:  ").replaceAll("[[", "\nFRAME:  ").replaceAll("]]", "").replace("{{alt text: ", "\nAlternate Title: ").replace("{{Alt text: ","\nAlternate Title: ").replace("{{ alt: ","\nAlternate Title: ").replace("}}", "").replaceAll("{{","").replaceAll("}}", "");
-                var month = getMonthString(body2.month);
-                var date = month + " " + body2.day + ", " + body2.year;
-                var nextURL = "/comics/" + (params+1);
-                if(params - 1 < 1)
-                {
-                    var previousURL = "/comics/" + (params);
-                }
-                else
-                {
-                    var previousURL = "/comics/" + (params-1);
-                }
-                resp.render("index", {dataObj: body2, transcript:frames, date:date, nextURL:nextURL, previousURL:previousURL});
-            }
-            else
-                resp.render("404");
-            })
+            loadPageData(resp,params,maxNum);
         }
         else
         {
@@ -173,7 +137,6 @@ app.get('/randomComic', (req,resp) => {
     })
     
 })
-
 
 //listen for requests
 app.listen(app.get("port"), function(){
